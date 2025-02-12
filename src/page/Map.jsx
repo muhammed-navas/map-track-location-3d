@@ -121,6 +121,8 @@ const AnimatorMap = () => {
         animationRef.current = requestAnimationFrame(animate);
       } else {
         setIsAnimating(false);
+        // Zoom out when the bike reaches the end location
+        map.setZoom(12); // Adjust the zoom level as needed
       }
     };
 
