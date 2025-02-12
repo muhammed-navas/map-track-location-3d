@@ -10,6 +10,7 @@ const AnimatorMap = () => {
   const bikeMarkerRef = useRef(null);
   const [map, setMap] = useState(null);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [speed, setSpeed] = useState(1); // Default speed (1x)
 
   useEffect(() => {
     const initMap = async () => {
@@ -56,7 +57,8 @@ const AnimatorMap = () => {
     setIsAnimating(true);
     let currentIndex = 0;
     let startTime;
-    const duration = 200; // Animation speed per segment
+    const baseDuration = 200; // Base animation speed per segment
+    const duration = baseDuration / speed; // Adjust duration based on speed
 
     // Create bike marker only when animation starts
     if (!bikeMarkerRef.current) {
@@ -160,6 +162,10 @@ const AnimatorMap = () => {
     }
   };
 
+  const handleSpeedChange = (event) => {
+    setSpeed(parseFloat(event.target.value)); // Update speed based on slider value
+  };
+
   return (
     <div className="px-4 md:px-8 lg:px-12 pt-3">
       <h1 className="text-2xl font-bold mb-4">Bike Route Navigation</h1>
@@ -187,6 +193,25 @@ const AnimatorMap = () => {
           >
             {isAnimating ? "Stop Navigation" : "Start Navigation"}
           </button>
+        </div>
+        <div className="mb-4">
+          <label
+            htmlFor="speed"
+            className="block text-sm font-medium text-gray-700"
+          >
+            Animation Speed: {speed}x
+          </label>
+          <input
+            type="range"
+            id="speed"
+            name="speed"
+            min="0.5"
+            max="5"
+            step="0.5"
+            value={speed}
+            onChange={handleSpeedChange}
+            className="w-full"
+          />
         </div>
         <div
           ref={mapRef}
