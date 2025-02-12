@@ -3,16 +3,13 @@ import { Loader } from "@googlemaps/js-api-loader";
 
 const AnimatorMap = () => {
   const mapRef = useRef(null);
-  const markerRef = useRef(null);
-  const polylineRef = useRef(null);
-  const [map, setMap] = useState(null);
-  const animationFrameRef = useRef(null);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const [routePoints, setRoutePoints] = useState([]);
-  const [startLocation, setStartLocation] = useState("");
-  const [endLocation, setEndLocation] = useState("");
   const startInputRef = useRef(null);
   const endInputRef = useRef(null);
+  const polylineRef = useRef(null);
+  const animationRef = useRef(null);
+  const bikeMarkerRef = useRef(null);
+  const [map, setMap] = useState(null);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   useEffect(() => {
     const initMap = async () => {
@@ -24,248 +21,176 @@ const AnimatorMap = () => {
 
       const google = await loader.load();
       const mapInstance = new google.maps.Map(mapRef.current, {
-        zoom: 12,
-        center: { lat: 28.6139, lng: 77.209 }, // Default center (Delhi)
-        mapTypeId: "terrain",
-        tilt: 45,
-        heading: 0,
-        mapId: "90f87356969d889c",
+        zoom: 16,
+        center: { lat: 19.076, lng: 72.8777 },
+        mapTypeId: google.maps.MapTypeId.ROADMAP,
+        disableDefaultUI: false,
+        zoomControl: true,
       });
 
       setMap(mapInstance);
 
-      // Initialize autocomplete for start and end locations
-      const startAutocomplete = new google.maps.places.Autocomplete(
-        startInputRef.current,
-        {
-          fields: ["geometry", "name"],
-        }
-      );
-      const endAutocomplete = new google.maps.places.Autocomplete(
-        endInputRef.current,
-        {
-          fields: ["geometry", "name"],
-        }
+      const defaultBounds = new google.maps.LatLngBounds(
+        new google.maps.LatLng(8.4, 68.7),
+        new google.maps.LatLng(37.6, 97.25)
       );
 
-      startAutocomplete.addListener("place_changed", () => {
-        const place = startAutocomplete.getPlace();
-        if (place.geometry) {
-          setStartLocation(place.geometry.location);
-        }
+      new google.maps.places.Autocomplete(startInputRef.current, {
+        bounds: defaultBounds,
+        componentRestrictions: { country: "IN" },
+        fields: ["geometry", "name"],
       });
 
-      endAutocomplete.addListener("place_changed", () => {
-        const place = endAutocomplete.getPlace();
-        if (place.geometry) {
-          setEndLocation(place.geometry.location);
-        }
+      new google.maps.places.Autocomplete(endInputRef.current, {
+        bounds: defaultBounds,
+        componentRestrictions: { country: "IN" },
+        fields: ["geometry", "name"],
       });
     };
 
     initMap();
-    return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
   }, []);
 
-  const initializeRouteServices = (google, mapInstance, start, end) => {
-    const directionsService = new google.maps.DirectionsService();
-    const directionsRenderer = new google.maps.DirectionsRenderer({
-      map: mapInstance,
-      suppressMarkers: true,
-      preserveViewport: true,
-    });
-
-    const request = {
-      origin: start,
-      destination: end,
-      travelMode: google.maps.TravelMode.DRIVING,
-    };
-
-    directionsService.route(request, (result, status) => {
-      if (status === "OK") {
-        directionsRenderer.setDirections(result);
-        const path = result.routes[0].overview_path;
-        const points = path.map((point) => ({
-          lat: point.lat(),
-          lng: point.lng(),
-        }));
-        setRoutePoints(points);
-        initializeMarker(google, mapInstance, points[0]);
-        initializePolyline(google, mapInstance);
-      }
-    });
-  };
-
-  const initializeMarker = (google, mapInstance, position) => {
-    if (markerRef.current) {
-      markerRef.current.setMap(null);
-    }
-
-    markerRef.current = new google.maps.Marker({
-      position: position,
-      map: mapInstance,
-      icon: {
-        url: "https://storage.googleapis.com/indian-truck-drivers-image/scooter_right.png",
-        scaledSize: new google.maps.Size(50, 50), // Adjust size as needed
-        anchor: new google.maps.Point(25, 25), // Center of the image
-      },
-    });
-  };
-
-  const initializePolyline = (google, mapInstance) => {
-    if (polylineRef.current) {
-      polylineRef.current.setMap(null);
-    }
-
-    polylineRef.current = new google.maps.Polyline({
-      map: mapInstance,
-      strokeColor: "#4285F4",
-      strokeWeight: 4,
-      strokeOpacity: 0.8,
-    });
-  };
-
-  const animateRoute = () => {
-    if (!map || !routePoints.length || isAnimating) return;
-
+  const animateRoute = (path, google) => {
+    if (!map || !path || path.length < 2) return;
     setIsAnimating(true);
     let currentIndex = 0;
-    const numPoints = routePoints.length;
-    const duration = 10000; // 10 seconds for full animation
-    const google = window.google;
+    let startTime;
+    const duration = 200; // Animation speed per segment
+
+    // Create bike marker only when animation starts
+    if (!bikeMarkerRef.current) {
+      bikeMarkerRef.current = new google.maps.Marker({
+        position: path[0],
+        map: map,
+        icon: {
+          url: "https://storage.googleapis.com/indian-truck-drivers-image/scooter_right.png",
+          scaledSize: new google.maps.Size(50, 50),
+          anchor: new google.maps.Point(25, 25),
+        },
+        zIndex: 2,
+      });
+    } else {
+      bikeMarkerRef.current.setPosition(path[0]);
+      bikeMarkerRef.current.setMap(map);
+    }
+
+    // Create or clear polyline
+    if (!polylineRef.current) {
+      polylineRef.current = new google.maps.Polyline({
+        path: [],
+        geodesic: true,
+        strokeColor: "#4285F4",
+        strokeOpacity: 1.0,
+        strokeWeight: 3,
+        map: map,
+      });
+    } else {
+      polylineRef.current.setPath([]);
+    }
 
     const animate = (timestamp) => {
-      if (!animationFrameRef.current) {
-        animationFrameRef.current = timestamp;
-      }
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const fraction = Math.min(elapsed / duration, 1);
 
-      const progress = (timestamp - animationFrameRef.current) / duration;
-      const pointIndex = Math.min(
-        Math.floor(progress * numPoints),
-        numPoints - 1
-      );
+      if (currentIndex < path.length - 1) {
+        const currentPoint = path[currentIndex];
+        const nextPoint = path[currentIndex + 1];
 
-      if (pointIndex !== currentIndex) {
-        const currentPoint = routePoints[pointIndex];
-        const nextPoint = routePoints[Math.min(pointIndex + 1, numPoints - 1)];
-
-        // Interpolate between points for smoother animation
-        const interpolate = (start, end, factor) => {
-          return start + (end - start) * factor;
-        };
-
-        const factor = (progress * numPoints) % 1;
-        const interpolatedLat = interpolate(
-          currentPoint.lat,
-          nextPoint.lat,
-          factor
-        );
-        const interpolatedLng = interpolate(
-          currentPoint.lng,
-          nextPoint.lng,
-          factor
-        );
-
-        // Update marker position
+        // Move smoothly along the path
         const position = new google.maps.LatLng(
-          interpolatedLat,
-          interpolatedLng
-        );
-        markerRef.current.setPosition(position);
-
-        // Update polyline path
-        const path = polylineRef.current.getPath();
-        path.push(position);
-        polylineRef.current.setPath(path);
-
-        // Calculate heading for marker rotation
-        const heading = google.maps.geometry.spherical.computeHeading(
-          position,
-          new google.maps.LatLng(nextPoint.lat, nextPoint.lng)
+          currentPoint.lat() +
+            (nextPoint.lat() - currentPoint.lat()) * fraction,
+          currentPoint.lng() + (nextPoint.lng() - currentPoint.lng()) * fraction
         );
 
-        // Update marker rotation
-        markerRef.current.setIcon({
-          ...markerRef.current.getIcon(),
-          rotation: heading,
-        });
+        map.setCenter(position);
+        bikeMarkerRef.current.setPosition(position);
 
-        // Smooth camera follow with zoom-in and zoom-out
-        const zoomLevel = progress < 0.1 || progress > 0.9 ? 15 : 17; // Zoom out at start and end
-        const cameraPosition = google.maps.geometry.spherical.computeOffset(
-          position,
-          200, // Follow distance
-          heading - 180 // Camera angle
-        );
+        // Update polyline
+        const newPath = path.slice(0, currentIndex + 1);
+        newPath.push(position);
+        polylineRef.current.setPath(newPath);
 
-        map.moveCamera({
-          center: cameraPosition,
-          zoom: zoomLevel,
-          tilt: 45,
-          heading: heading,
-        });
+        if (fraction === 1) {
+          currentIndex++;
+          startTime = null;
+        }
 
-        currentIndex = pointIndex;
-      }
-
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+        animationRef.current = requestAnimationFrame(animate);
       } else {
         setIsAnimating(false);
-        animationFrameRef.current = null;
       }
     };
 
-    animationFrameRef.current = requestAnimationFrame(animate);
+    animationRef.current = requestAnimationFrame(animate);
   };
 
-  const handleStartAnimation = () => {
-    if (!startLocation || !endLocation) {
-      alert("Please select both start and end locations.");
+  const handleAnimateClick = async () => {
+    if (isAnimating) {
+      cancelAnimationFrame(animationRef.current);
+      setIsAnimating(false);
       return;
     }
 
-    const google = window.google;
-    initializeRouteServices(google, map, startLocation, endLocation);
-    polylineRef.current.setPath([]); // Clear previous polyline path
-    animateRoute();
+    const startPlace = startInputRef.current.value;
+    const endPlace = endInputRef.current.value;
+    if (!startPlace || !endPlace) {
+      alert("Please enter both start and end locations");
+      return;
+    }
+
+    const directionsService = new google.maps.DirectionsService();
+    try {
+      const result = await directionsService.route({
+        origin: startPlace,
+        destination: endPlace,
+        travelMode: google.maps.TravelMode.DRIVING,
+      });
+
+      const path = result.routes[0].overview_path;
+      map.setCenter(path[0]);
+      animateRoute(path, google);
+    } catch (error) {
+      console.error("Error fetching directions:", error);
+      alert("Could not calculate route. Please try different locations.");
+    }
   };
 
   return (
-    <div className="flex flex-col h-screen">
-      <div className="p-4 bg-white shadow-md">
-        <h1 className="text-2xl font-bold mb-4">3D Route Animation</h1>
-        <div className="flex gap-4 mb-4">
+    <div className="px-4 md:px-8 lg:px-12 pt-3">
+      <h1 className="text-2xl font-bold mb-4">Bike Route Navigation</h1>
+      <div className="bg-gray-100 p-3 rounded-lg shadow-md">
+        <div className="mb-4 grid grid-cols-1 md:grid-cols-3 gap-4">
           <input
             ref={startInputRef}
             type="text"
             placeholder="Enter start location"
-            className="flex-1 p-2 border rounded-lg"
+            className="p-2 border rounded w-full"
           />
           <input
             ref={endInputRef}
             type="text"
             placeholder="Enter end location"
-            className="flex-1 p-2 border rounded-lg"
+            className="p-2 border rounded w-full"
           />
+          <button
+            onClick={handleAnimateClick}
+            className={`p-2 ${
+              isAnimating
+                ? "bg-red-500 hover:bg-red-600"
+                : "bg-blue-500 hover:bg-blue-600"
+            } text-white rounded transition-colors`}
+          >
+            {isAnimating ? "Stop Navigation" : "Start Navigation"}
+          </button>
         </div>
-        <button
-          onClick={handleStartAnimation}
-          disabled={isAnimating}
-          className={`px-4 py-2 rounded-lg ${
-            isAnimating
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-blue-500 hover:bg-blue-600 text-white"
-          }`}
-        >
-          {isAnimating ? "Animating..." : "Start Animation"}
-        </button>
+        <div
+          ref={mapRef}
+          className="w-full h-[600px] rounded-lg overflow-hidden relative"
+        />
       </div>
-      <div ref={mapRef} className="flex-1 w-full" />
     </div>
   );
 };
