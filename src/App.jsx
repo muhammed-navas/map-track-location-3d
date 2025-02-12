@@ -1,10 +1,12 @@
 import "./App.css";
-import AnimatorMap from "./page/Map";
+import Main from "./map/main";
+// import AnimatorMap from "./page/Map";
 
 function App() {
   return (
     <div>
-      <AnimatorMap />
+      {/* <AnimatorMap /> */}
+      <Main />
     </div>
   );
 }
