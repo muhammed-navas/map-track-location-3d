@@ -346,7 +346,7 @@ const MapComponent = () => {
 
           {/* Map Container */}
           <div className="lg:w-2/3">
-            <div className="bg-white rounded-xl shadow-lg p-2 h-[800px]">
+            <div className="bg-white rounded-xl shadow-lg p-2 h-[80vh]">
               {!mapLoaded && (
                 <div className="w-full h-full flex items-center justify-center bg-gray-100 rounded-lg">
                   <div className="text-center">
