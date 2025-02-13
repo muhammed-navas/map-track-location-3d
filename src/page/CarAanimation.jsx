@@ -75,12 +75,12 @@ const AutoCar = () => {
 
     // Load 3D model
     const loader = new GLTFLoader();
-    loader.load('/SUV.glb', (glb) => {
+    loader.load('./SUV.glb', (glb) => {
       const model = glb.scene;
       
       scene.add(model);
       model.matrixAutoUpdate = false;
-      vehicle.scale = new YUKA.Vector3(1.0, 1.0,1.0);
+      vehicle.scale = new YUKA.Vector3(2.0, 2.0,2.0);
       vehicle.setRenderComponent(model, sync);
       
       // Set initial position to point 1
@@ -236,8 +236,8 @@ const AutoCar = () => {
             key={key}
             className="absolute z-10 bg-white px-2 py-1 rounded-full shadow-md transform -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: ${position.x}px,
-              top: ${position.y}px,
+              left: "${position.x}px",
+              top: "${position.y}px",
             }}
           >
             Point {key}

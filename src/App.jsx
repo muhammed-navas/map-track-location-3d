@@ -1,4 +1,5 @@
 import "./App.css";
+import AutoCar from "./page/CarAanimation";
 import ThreeDAnimatorMap from "./page/Map1";
 // import Main from "./map/main";
 // import AnimatorMap from "./page/Map";
@@ -8,7 +9,8 @@ function App() {
     <div>
       {/* <AnimatorMap /> */}
       {/* <Main /> */}
-      <ThreeDAnimatorMap />
+      {/* <ThreeDAnimatorMap /> */}
+      <AutoCar />
     </div>
   );
 }
