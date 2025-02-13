@@ -1,12 +1,14 @@
 import "./App.css";
+import ThreeDAnimatorMap from "./page/Map1";
 // import Main from "./map/main";
-import AnimatorMap from "./page/Map";
+// import AnimatorMap from "./page/Map";
 
 function App() {
   return (
     <div>
-      <AnimatorMap />
+      {/* <AnimatorMap /> */}
       {/* <Main /> */}
+      <ThreeDAnimatorMap />
     </div>
   );
 }
